@@ -216,7 +216,7 @@ jobs:
           echo CIBW_PYTHON_VERSION=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
      
       - name: Get Build Identifier
-        run: python -m cibuildwheel . --print-build-identifiers
+        run: python -m cibuildwheel --print-build-identifiers
     
       - name: Build wheels
         env:
@@ -227,19 +227,9 @@ jobs:
           CIBW_BEFORE_BUILD: swig -version
         run: python -m cibuildwheel --output-dir wheelhouse
 
-      - name: Get wheelhouse file on Windows
-        working-directory: wheelhouse
-        if: always() && runner.os == 'Windows'
-        run: |
-          $file = Get-ChildItem .\*.whl | Select-Object -Expand FullName
-          echo WHEELHOUSE_WIN=$file >> $GITHUB_ENV
-      - name: Check wheelhouse file on Windows
-        working-directory: wheelhouse
-        if: always() && runner.os == 'Windows'
-        run: |
-          Write-Host "WHEELHOUSE_WIN : ${{ env.WHEELHOUSE_WIN }}"
       - name: "List result"
         run: ls -R
+
       - name: Check with Twine
         working-directory: wheelhouse
         run: twine check *.whl
@@ -247,11 +237,10 @@ jobs:
       # Wildcard use is different with PowerShell
       # cf. https://stackoverflow.com/a/43900040
       - name: Check wheel installation on Windows
-        working-directory: ./wheelhouse
         if: always() && runner.os == 'Windows'
+        working-directory: wheelhouse
         run: |
-          $file = Get-ChildItem .\*.whl | Select-Object -Expand FullName
-          pip install $file
+          pip install (get-item .\*.whl).FullName
           python -c "import verovio; tk = verovio.toolkit(); tk.getVersion()"
      
       - uses: actions/upload-artifact@v2
