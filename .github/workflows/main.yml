@@ -9,6 +9,9 @@ on:
       # Push events on develop branch
       - main
 
+env:
+  CIBW_PYTHON_VERSION: ''
+
 jobs:
   build_wheels_manually:
     name: Build wheels (${{ matrix.python-version }}, ${{ matrix.os }}-${{ matrix.architecture }})
