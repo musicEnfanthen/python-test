@@ -10,7 +10,7 @@ on:
       - main
 
 jobs:
-  build_wheels:
+  build_wheels_manually:
     name: Build wheels (${{ matrix.python-version }}, ${{ matrix.os }}-${{ matrix.architecture }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -136,5 +136,120 @@ jobs:
         with:
           name: ${{ runner.os }}-python-${{ matrix.python-version }}
           path: dist/*.whl
+
+  build_cibuildwheels:
+    name: Build ciwheels (${{ matrix.python-version }}, ${{ matrix.platform_id }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      # Build the wheels for Linux, Windows and macOS for Python 3.6 and newer
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        python-version: [ 3.9 ] # [3.6, 3.7, 3.8, 3.9]
+        bitness: [ 32, 64 ]
+        include:
+          # Run 32 and 64 bit version in parallel for Linux and Windows
+          - os: windows-latest
+            architecture: x64
+            platform_id: win_amd64
+          - os: windows-latest
+            architecture: x86
+            platform_id: win32
+        exclude:
+          - os: ubuntu-latest
+            architecture: x64
+            platform_id: manylinux_x86_64
+          - os: ubuntu-latest
+            architecture: x86
+            platform_id: manylinux_i686
+          - os: macos-latest
+            architecture: x64
+            platform_id: macosx_x86_64   
+          - os: macos-latest
+            architecture: x86
+        
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture }}
       
-   
+      - name: Verify Python version
+        run: python -c "import sys; print(sys.version)"
+      
+      - name: Install dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install cibuildwheel==1.7.1 twine
+            
+      #===============================================#
+      # SET UP DATA RESOURCES
+      #===============================================#
+      - name: Move python bindgins to top level
+        run: mv bindings/python/setup.py .
+
+      - name: Create __init__.py in data folder
+        working-directory: data
+        run: touch __init__.py
+
+      - name: Create MANIFEST.in with recursively included data
+        run: |
+          touch MANIFEST.in
+          echo "recursive-include data *" > MANIFEST.in
+      - name: Verify
+        run: ls -R
+
+      #===============================================#
+      # WHEELS
+      #===============================================#
+      - name: Set CIBW_PYTHON_VERSION
+        run: |
+          # Remove dot from python-version for CIBW and prefix with cp
+          echo CIBW_PYTHON_VERSION=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
+      - name: Get Build Identifier
+        run: python -m cibuildwheel . --print-build-identifiers
+    
+      - name: Build wheels
+        env:
+          CIBW_BUILD: ${{ env.CIBW_PYTHON_VERSION }}-${{ matrix.platform_id }}
+          CIBW_BEFORE_ALL_LINUX: yum install -y swig
+          CIBW_BEFORE_ALL_MACOS: brew install swig
+          CIBW_BEFORE_ALL_WINDOWS: choco install swig -f -y
+          CIBW_BEFORE_BUILD: swig -version
+        run: python -m cibuildwheel . --output-dir wheelhouse
+
+      - name: Get wheelhouse file on Windows
+        working-directory: ./wheelhouse
+        if: always() && runner.os == 'Windows'
+        run: |
+          $file = Get-ChildItem .\*.whl | Select-Object -Expand FullName
+          echo WHEELHOUSE_WIN=$file >> $GITHUB_ENV
+      - name: Check wheelhouse file on Windows
+        working-directory: ./wheelhouse
+        if: always() && runner.os == 'Windows'
+        run: |
+          Write-Host "WHEELHOUSE_WIN : ${{ env.WHEELHOUSE_WIN }}"
+      - name: "List result"
+        run: ls -R
+      - name: "Check with Twine"
+        working-directory: ./wheelhouse
+        run: twine check *.whl
+
+      # Wildcard use is different with PowerShell
+      # cf. https://stackoverflow.com/a/43900040
+      - name: Check wheel installation on Windows
+        working-directory: ./wheelhouse
+        if: always() && runner.os == 'Windows'
+        run: |
+          $file = Get-ChildItem .\*.whl | Select-Object -Expand FullName
+          pip install $file
+          python -c "import verovio; tk = verovio.toolkit(); tk.getVersion()"
+     
+     - uses: actions/upload-artifact@v2
+        with:
+          name: cibuildwheel-${{ runner.os }}-python-${{ matrix.python-version }}
+          path: ./wheelhouse/*.whl  
