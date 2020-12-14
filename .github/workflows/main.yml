@@ -160,13 +160,13 @@ jobs:
         exclude:
           - os: ubuntu-latest
             architecture: x64
-            platform_id: manylinux_x86_64
+           # platform_id: manylinux_x86_64
           - os: ubuntu-latest
             architecture: x86
-            platform_id: manylinux_i686
+         #   platform_id: manylinux_i686
           - os: macos-latest
             architecture: x64
-            platform_id: macosx_x86_64   
+         #   platform_id: macosx_x86_64   
           - os: macos-latest
             architecture: x86
         
