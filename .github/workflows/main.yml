@@ -148,6 +148,7 @@ jobs:
         os: [ windows-latest, ubuntu-latest, macos-latest ]
         python-version: [ 3.9 ] # [3.6, 3.7, 3.8, 3.9]
         architecture: [ x86, x64 ]
+        platform_id: [win_amd64, win32, manylinux_x86_64, manylinux_i686, macosx_x86_64]
         include:
           # Run 32 and 64 bit version in parallel for Linux and Windows
           - os: windows-latest
@@ -210,6 +211,7 @@ jobs:
         run: |
           # Remove dot from python-version for CIBW and prefix with cp
           echo CIBW_PYTHON_VERSION=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
+     
       - name: Get Build Identifier
         run: python -m cibuildwheel . --print-build-identifiers
     
