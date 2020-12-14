@@ -10,7 +10,7 @@ on:
       - main
 
 env:
-  CIBW_PYTHON_VERSION: ''
+  CIBW_BUILD_IDENTIFIER: ''
 
 jobs:
   build_wheels_manually:
@@ -213,22 +213,23 @@ jobs:
       #===============================================#
       # WHEELS
       #===============================================#
-      - name: Set CIBW_PYTHON_VERSION
+      - name: Set CIBW_BUILD_IDENTIFIER
         shell: bash
         run: |
           # Remove dot from python-version for CIBW and prefix with cp
-          echo CIBW_PYTHON_VERSION=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
+          id=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g')-${{ matrix.platform_id }}
+          echo CIBW_BUILD_IDENTIFIER=$id >> $GITHUB_ENV
       
-      - name: Check Python version
+      - name: Check CIBW_BUILD_IDENTIFIER
         shell: bash
-        run: echo ${{ env.CIBW_PYTHON_VERSION }}
+        run: echo ${{ env.CIBW_BUILD_IDENTIFIER }}
         
       - name: Get Build Identifier
         run: python -m cibuildwheel --print-build-identifiers
     
       - name: Build wheels
         env:
-          CIBW_BUILD: ${{ env.CIBW_PYTHON_VERSION }}-${{ matrix.platform_id }}
+          CIBW_BUILD: ${{ env.CIBW_BUILD_IDENTIFIER }}-${{ matrix.platform_id }}
           CIBW_BEFORE_ALL_LINUX: yum install -y swig
           CIBW_BEFORE_ALL_MACOS: brew install swig
           CIBW_BEFORE_ALL_WINDOWS: choco install swig -f -y
