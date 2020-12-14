@@ -1,0 +1,140 @@
+name: Python Build
+
+on:
+  workflow_dispatch: # manual trigger
+  push:
+    # Trigger the workflow on push,
+    # but only for the branches specified
+    branches:
+      # Push events on develop branch
+      - main
+
+jobs:
+  build_wheels:
+    name: Build wheels (${{ matrix.python-version }}, ${{ matrix.os }}-${{ matrix.architecture }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      # Build the wheels for Linux, Windows and macOS for Python 3.6 and newer
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        python-version: [ 3.9 ] # [3.6, 3.7, 3.8, 3.9]
+        architecture: [ x86, x64 ]
+        include:
+          # Run 32 and 64 bit version in parallel for Linux and Windows
+          - os: windows-latest
+            architecture: x64
+          - os: windows-latest
+            architecture: x86
+        exclude:
+          - os: ubuntu-latest
+            architecture: x64
+          - os: macos-latest
+            architecture: x64
+          - os: ubuntu-latest
+            architecture: x86
+          - os: macos-latest
+            architecture: x86
+
+        
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: musicEnfanthen/verovio
+          ref: ci-test
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture }}
+      
+      - name: Verify Python version
+        run: python -c "import sys; print(sys.version)"
+  
+      #===============================================#
+      # SWIG
+      #===============================================#
+      - name: Install swig on Windows
+        if: runner.os == 'Windows'
+        run: choco install swig -f -y
+          
+      - name: Install swig on macOs
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install swig
+    
+      - name: Install swig on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install swig
+      
+      - name: Verify swig
+        run: swig -version
+      #===============================================#
+  
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel twine check-wheel-contents wheel-inspect
+        
+      #===============================================#
+      # SET UP DATA RESOURCES
+      #===============================================#   
+      - name: Move python bindgins to top level
+        run: mv bindings/python/setup.py .
+      
+      - name: Create __init__.py in data folder
+        working-directory: data
+        run: touch __init__.py
+      
+      - name: Create MANIFEST.in with recursively included data
+        run: |
+          touch MANIFEST.in
+          echo "recursive-include data *" > MANIFEST.in
+      
+      - name: Verify
+        run: ls -R
+         
+      #===============================================#
+      # WHEELS
+      #===============================================#
+      - name: Build ext
+        run: python setup.py build_ext
+
+      - name: Build bdist wheel
+        run: python setup.py bdist_wheel
+ 
+      - name: List result
+        run: ls -R
+      - name: Check with Twine
+        working-directory: dist
+        run: twine check *.whl
+    #  - name: "Check with check-wheel-contents"
+    #    if: always() && runner.os != 'Windows'
+    #    working-directory: dist
+    #    run: check-wheel-contents *.whl --ignore W002
+      - name: Check with wheel-inspect
+        if: always() && runner.os != 'Windows'
+        working-directory: dist
+        run: wheel2json *.whl
+
+      # Wildcard use is different with PowerShell
+      # cf. https://stackoverflow.com/a/43900040
+      - name: Check wheel installation on Windows
+        if: always() && runner.os == 'Windows'
+        working-directory: dist
+        run: |
+          pip install (get-item .\*.whl).FullName
+          python -c "import verovio; tk = verovio.toolkit(); tk.getVersion()"
+      
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: ${{ runner.os }}-python-${{ matrix.python-version }}
+          path: dist/*.whl
+      
+   
