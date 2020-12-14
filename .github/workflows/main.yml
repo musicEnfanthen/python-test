@@ -225,23 +225,23 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: brew install swig
           CIBW_BEFORE_ALL_WINDOWS: choco install swig -f -y
           CIBW_BEFORE_BUILD: swig -version
-        run: python -m cibuildwheel . --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse
 
       - name: Get wheelhouse file on Windows
-        working-directory: ./wheelhouse
+        working-directory: wheelhouse
         if: always() && runner.os == 'Windows'
         run: |
           $file = Get-ChildItem .\*.whl | Select-Object -Expand FullName
           echo WHEELHOUSE_WIN=$file >> $GITHUB_ENV
       - name: Check wheelhouse file on Windows
-        working-directory: ./wheelhouse
+        working-directory: wheelhouse
         if: always() && runner.os == 'Windows'
         run: |
           Write-Host "WHEELHOUSE_WIN : ${{ env.WHEELHOUSE_WIN }}"
       - name: "List result"
         run: ls -R
-      - name: "Check with Twine"
-        working-directory: ./wheelhouse
+      - name: Check with Twine
+        working-directory: wheelhouse
         run: twine check *.whl
 
       # Wildcard use is different with PowerShell
