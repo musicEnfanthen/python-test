@@ -222,7 +222,7 @@ jobs:
         shell: bash
         run: |
           # Remove dot from python-version for CIBW and prefix with cp
-          echo CIBW_PYTHON_VERSION=$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
+          echo CIBW_PYTHON_VERSION=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
       
       - name: Check Python version
         shell: bash
