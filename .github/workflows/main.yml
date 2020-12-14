@@ -249,7 +249,7 @@ jobs:
           pip install $file
           python -c "import verovio; tk = verovio.toolkit(); tk.getVersion()"
      
-     - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
           name: cibuildwheel-${{ runner.os }}-python-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl  
