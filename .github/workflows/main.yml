@@ -218,8 +218,11 @@ jobs:
       - name: Set CIBW_PYTHON_VERSION
         run: |
           # Remove dot from python-version for CIBW and prefix with cp
-          echo CIBW_PYTHON_VERSION=cp$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
-     
+          echo CIBW_PYTHON_VERSION=$(echo ${{ matrix.python-version }} | sed -e 's/\.//g') >> $GITHUB_ENV
+      
+      - name: Check Python version
+        run: echo ${{ env.CIBW_PYTHON_VERSION }}
+        
       - name: Get Build Identifier
         run: python -m cibuildwheel --print-build-identifiers
     
