@@ -197,7 +197,15 @@ jobs:
       - name: Build wheels
         env:
           CIBW_BUILD: ${{ env.CIBW_BUILD_IDENTIFIER }}
-          CIBW_BEFORE_ALL_LINUX: yum upgrade -y && yum list swig && yum install -y swig-4.0.2
+          CIBW_BEFORE_ALL_LINUX: |
+            if [[ ! -e $(command -v swig) ]]; then
+              curl -L https://sourceforge.net/projects/swig/files/swig/swig-4.0.2/swig-4.0.2.tar.gz/download --output /tmp/swig.tar.gz
+              mkdir /tmp/swig
+              tar -xvzf /tmp/swig.tar.gz -C /tmp/swig --strip-components 1 &> /dev/null
+              pushd /tmp/swig
+              ./configure --without-alllang --with-python3 && make -j2 && make install > /dev/null
+              popd
+            fi
           CIBW_BEFORE_ALL_MACOS: brew update && brew install swig
           CIBW_BEFORE_ALL_WINDOWS: choco upgrade chocolatey -y && choco install swig -f -y && choco upgrade all -y
           CIBW_BEFORE_BUILD: swig -version
