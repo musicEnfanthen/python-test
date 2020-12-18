@@ -201,6 +201,7 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: brew install swig
           CIBW_BEFORE_ALL_WINDOWS: choco install swig -f -y
           CIBW_BEFORE_BUILD: swig -version
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         run: python -m cibuildwheel --output-dir wheelhouse
 
       - name: "List result"
