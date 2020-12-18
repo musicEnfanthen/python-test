@@ -197,7 +197,7 @@ jobs:
       - name: Build wheels
         env:
           CIBW_BUILD: ${{ env.CIBW_BUILD_IDENTIFIER }}
-          CIBW_BEFORE_ALL_LINUX: yum --showduplicates list swig | expand && yum install -y swig
+          CIBW_BEFORE_ALL_LINUX: yum --showduplicates list swig | expand && yum check-update swig && yum install -y swig
           CIBW_BEFORE_ALL_MACOS: brew install swig
           CIBW_BEFORE_ALL_WINDOWS: choco install swig -f -y
           CIBW_BEFORE_BUILD: swig -version
